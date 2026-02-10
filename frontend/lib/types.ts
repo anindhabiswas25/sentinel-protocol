@@ -84,3 +84,11 @@ export interface StatsResponse {
   unverified_contracts: number;
   average_trust_score: number;
 }
+
+export interface DetectNetworkResponse {
+  address: string;
+  found: boolean;
+  networks: string[];
+  primary?: string;
+  message?: string;
+}

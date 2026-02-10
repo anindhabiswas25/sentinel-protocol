@@ -295,6 +295,34 @@ async def validate_address(
     }
 
 
+@router.get("/detect-network/{address}", tags=["Utilities"])
+async def detect_network(address: str):
+    """
+    Auto-detect which blockchain network(s) a contract is deployed on.
+    Checks all supported networks and returns the ones where the address
+    contains contract bytecode.
+    """
+    if not blockchain_service.is_valid_address(address):
+        raise HTTPException(status_code=400, detail="Invalid Ethereum address")
+
+    results = blockchain_service.detect_network(address)
+
+    if not results:
+        return {
+            "address": address,
+            "found": False,
+            "networks": [],
+            "message": "No contract found at this address on any supported network.",
+        }
+
+    return {
+        "address": address,
+        "found": True,
+        "networks": [r["network"] for r in results],
+        "primary": results[0]["network"],
+    }
+
+
 @router.post("/seed-patterns", tags=["Admin"])
 async def seed_vulnerability_patterns():
     """

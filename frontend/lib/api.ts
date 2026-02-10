@@ -3,6 +3,7 @@
 import { API_BASE_URL } from "./constants";
 import type {
   ContractAnalysisResponse,
+  DetectNetworkResponse,
   HealthResponse,
   NetworkInfo,
   AnalysisHistoryItem,
@@ -49,6 +50,12 @@ export async function analyzeSourceCode(
       contract_name: contractName ?? "UserContract",
     }),
   });
+}
+
+export async function detectNetwork(
+  address: string
+): Promise<DetectNetworkResponse> {
+  return request<DetectNetworkResponse>(`/detect-network/${address}`);
 }
 
 /* ── Info Endpoints ────────────────────────────────── */

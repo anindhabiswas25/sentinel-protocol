@@ -3,25 +3,24 @@
 import { useState } from "react";
 import { Search, Code2 } from "lucide-react";
 import { isValidAddress } from "@/lib/utils";
-import ChainSelector from "./ChainSelector";
-import type { ChainId } from "@/lib/constants";
 
 type Mode = "address" | "source";
 
 interface Props {
-  onSubmitAddress: (address: string, chain: ChainId) => void;
+  onSubmitAddress: (address: string) => void;
   onSubmitSource: (code: string) => void;
   loading: boolean;
+  statusMessage?: string;
 }
 
 export default function ContractInput({
   onSubmitAddress,
   onSubmitSource,
   loading,
+  statusMessage,
 }: Props) {
   const [mode, setMode] = useState<Mode>("address");
   const [address, setAddress] = useState("");
-  const [chain, setChain] = useState<ChainId>("ethereum");
   const [source, setSource] = useState("");
   const [error, setError] = useState("");
 
@@ -34,7 +33,7 @@ export default function ContractInput({
         setError("Enter a valid Ethereum address (0x…40 hex chars)");
         return;
       }
-      onSubmitAddress(address, chain);
+      onSubmitAddress(address);
     } else {
       if (source.trim().length < 20) {
         setError("Paste at least a minimal Solidity contract");
@@ -77,14 +76,16 @@ export default function ContractInput({
 
       {mode === "address" ? (
         <>
-          <ChainSelector value={chain} onChange={setChain} />
           <input
             type="text"
-            placeholder="0x contract address…"
+            placeholder="0x contract address — network is detected automatically"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             className="w-full rounded-lg border border-card-border bg-background px-4 py-3 font-mono text-sm placeholder:text-muted/50 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
           />
+          {statusMessage && (
+            <p className="text-sm text-accent animate-pulse">{statusMessage}</p>
+          )}
         </>
       ) : (
         <textarea

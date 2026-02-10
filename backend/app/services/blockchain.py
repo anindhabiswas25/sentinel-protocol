@@ -292,6 +292,30 @@ class BlockchainService:
         except:
             return False
 
+    def detect_network(self, address: str) -> list[dict]:
+        """
+        Check all connected networks to find which ones contain
+        a contract at the given address.
+
+        Returns a list of dicts: [{"network": "ethereum", "is_contract": True}, ...]
+        Only networks where the address holds contract code are included.
+        """
+        if not self.is_valid_address(address):
+            return []
+
+        results: list[dict] = []
+        checksum = Web3.to_checksum_address(address)
+
+        for network, w3 in self.networks.items():
+            try:
+                code = w3.eth.get_code(checksum)
+                if len(code) > 2:  # not just "0x"
+                    results.append({"network": network, "is_contract": True})
+            except Exception as e:
+                logger.debug(f"detect_network: {network} lookup failed: {e}")
+
+        return results
+
 
 # Singleton instance
 blockchain_service = BlockchainService()
