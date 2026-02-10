@@ -1,0 +1,202 @@
+[
+  {
+    "id": "reentrancy",
+    "name": "Reentrancy",
+    "severity": "critical",
+    "category": "security",
+    "cwe_id": "CWE-841",
+    "description": "A reentrancy attack occurs when a contract makes an external call before updating its state, allowing the called contract to re-enter and exploit the inconsistent state. This was the vulnerability exploited in the famous DAO hack.",
+    "code_example": "function withdraw(uint amount) public {\n    require(balances[msg.sender] >= amount);\n    (bool success, ) = msg.sender.call{value: amount}(\"\");\n    require(success);\n    balances[msg.sender] -= amount; // State update after external call\n}",
+    "recommendation": "Use the checks-effects-interactions pattern: update state before making external calls. Consider using ReentrancyGuard from OpenZeppelin."
+  },
+  {
+    "id": "integer-overflow",
+    "name": "Integer Overflow/Underflow",
+    "severity": "high",
+    "category": "arithmetic",
+    "cwe_id": "CWE-190",
+    "description": "Integer overflow or underflow occurs when arithmetic operations exceed the maximum or minimum value a variable can hold, wrapping around to unexpected values. This can lead to incorrect calculations and security issues.",
+    "code_example": "// Vulnerable in Solidity < 0.8.0\nuint8 balance = 255;\nbalance += 1; // Overflows to 0",
+    "recommendation": "Use Solidity 0.8.0+ which has built-in overflow checks, or use SafeMath library for older versions."
+  },
+  {
+    "id": "access-control",
+    "name": "Missing Access Control",
+    "severity": "critical",
+    "category": "access-control",
+    "cwe_id": "CWE-284",
+    "description": "Critical functions lacking proper access controls can be called by anyone, potentially leading to unauthorized state changes, fund theft, or contract takeover.",
+    "code_example": "function setOwner(address newOwner) public {\n    owner = newOwner; // Anyone can become owner!\n}",
+    "recommendation": "Implement proper access control using modifiers like onlyOwner, or use OpenZeppelin's AccessControl or Ownable contracts."
+  },
+  {
+    "id": "unchecked-return",
+    "name": "Unchecked Return Values",
+    "severity": "medium",
+    "category": "error-handling",
+    "cwe_id": "CWE-252",
+    "description": "Failing to check return values of external calls can lead to silent failures and unexpected behavior, especially with token transfers that return false instead of reverting.",
+    "code_example": "token.transfer(recipient, amount); // Return value not checked!",
+    "recommendation": "Always check return values of external calls. Use SafeERC20 library for token transfers which reverts on failure."
+  },
+  {
+    "id": "tx-origin",
+    "name": "tx.origin Authentication",
+    "severity": "high",
+    "category": "authentication",
+    "cwe_id": "CWE-287",
+    "description": "Using tx.origin for authentication is vulnerable to phishing attacks where a malicious contract tricks users into calling it, then the malicious contract calls the vulnerable contract with the user's tx.origin.",
+    "code_example": "require(tx.origin == owner, \"Not owner\"); // Vulnerable!",
+    "recommendation": "Use msg.sender instead of tx.origin for authentication. msg.sender represents the immediate caller while tx.origin is always the original EOA."
+  },
+  {
+    "id": "front-running",
+    "name": "Front-Running Vulnerability",
+    "severity": "medium",
+    "category": "timing",
+    "cwe_id": "CWE-362",
+    "description": "Transactions visible in the mempool can be front-run by miners or bots who submit competing transactions with higher gas prices to execute before the original transaction.",
+    "code_example": "function claimReward(bytes32 answer) public {\n    require(keccak256(abi.encodePacked(answer)) == storedHash);\n    // Attacker can see the answer in mempool and front-run\n}",
+    "recommendation": "Use commit-reveal schemes, submarine sends, or other techniques to prevent front-running. Consider private mempool solutions."
+  },
+  {
+    "id": "delegatecall",
+    "name": "Unsafe Delegatecall",
+    "severity": "critical",
+    "category": "security",
+    "cwe_id": "CWE-829",
+    "description": "Delegatecall executes code in the context of the calling contract, which can lead to storage corruption or complete contract takeover if the target is untrusted or can be manipulated.",
+    "code_example": "function execute(address target, bytes calldata data) public {\n    target.delegatecall(data); // Dangerous if target is untrusted!\n}",
+    "recommendation": "Only delegatecall to trusted, immutable contract addresses. Never delegatecall to user-supplied addresses. Ensure storage layouts match between contracts."
+  },
+  {
+    "id": "selfdestruct",
+    "name": "Unprotected Selfdestruct",
+    "severity": "critical",
+    "category": "security",
+    "cwe_id": "CWE-749",
+    "description": "Selfdestruct can permanently destroy a contract and send remaining funds to a specified address. If unprotected, attackers can destroy the contract causing permanent loss of funds and functionality.",
+    "code_example": "function destroy(address payable recipient) public {\n    selfdestruct(recipient); // Anyone can destroy!\n}",
+    "recommendation": "Restrict selfdestruct to owner only, or remove it entirely as it's deprecated in newer Ethereum versions and may be removed in future hard forks."
+  },
+  {
+    "id": "timestamp-dependence",
+    "name": "Block Timestamp Manipulation",
+    "severity": "low",
+    "category": "timing",
+    "cwe_id": "CWE-367",
+    "description": "Block timestamps can be slightly manipulated by miners (within ~15 seconds), making them unreliable for precise time-sensitive operations like randomness generation or exact deadlines.",
+    "code_example": "if (block.timestamp >= deadline) {\n    // Time-sensitive action - can be manipulated\n}",
+    "recommendation": "Avoid using block.timestamp for critical time-sensitive operations. Allow for timestamp tolerance in time-based logic. Use block numbers for more predictable timing."
+  },
+  {
+    "id": "dos-gas",
+    "name": "Denial of Service (Gas Limit)",
+    "severity": "medium",
+    "category": "dos",
+    "cwe_id": "CWE-400",
+    "description": "Loops over unbounded arrays or expensive operations can cause transactions to exceed gas limits, making functions unusable and potentially locking funds permanently.",
+    "code_example": "function distribute() public {\n    for (uint i = 0; i < recipients.length; i++) {\n        recipients[i].transfer(amounts[i]); // Can exceed gas limit\n    }\n}",
+    "recommendation": "Implement pull-over-push patterns where users withdraw their own funds, use pagination, or implement gas limits for loops."
+  },
+  {
+    "id": "flash-loan",
+    "name": "Flash Loan Attack Vector",
+    "severity": "high",
+    "category": "defi",
+    "cwe_id": "CWE-669",
+    "description": "Contracts relying on token balances or spot prices for important decisions can be manipulated using flash loans, which allow borrowing large amounts without collateral within a single transaction.",
+    "code_example": "function getPrice() public view returns (uint) {\n    return token.balanceOf(address(this)) / totalSupply; // Manipulable!\n}",
+    "recommendation": "Use time-weighted average prices (TWAP), oracle solutions like Chainlink, or implement flash loan guards that detect single-transaction balance changes."
+  },
+  {
+    "id": "oracle-manipulation",
+    "name": "Price Oracle Manipulation",
+    "severity": "critical",
+    "category": "defi",
+    "cwe_id": "CWE-346",
+    "description": "Relying on easily manipulated price sources like spot prices on DEXs can lead to significant financial losses through price manipulation attacks.",
+    "code_example": "uint price = uniswapPair.getReserves(); // Single source, easily manipulated",
+    "recommendation": "Use decentralized oracles like Chainlink, implement TWAP, or use multiple oracle sources with deviation checks and circuit breakers."
+  },
+  {
+    "id": "uninitialized-storage",
+    "name": "Uninitialized Storage Pointer",
+    "severity": "high",
+    "category": "security",
+    "cwe_id": "CWE-824",
+    "description": "Uninitialized local storage variables can point to unexpected storage slots, potentially allowing attackers to overwrite critical state variables.",
+    "code_example": "function vulnerable() public {\n    StorageStruct storageVar; // Uninitialized, points to slot 0!\n    storageVar.value = userInput;\n}",
+    "recommendation": "Always initialize storage pointers explicitly with 'storage' keyword and proper assignment. Use memory for local structs when possible."
+  },
+  {
+    "id": "signature-replay",
+    "name": "Signature Replay Attack",
+    "severity": "high",
+    "category": "cryptography",
+    "cwe_id": "CWE-294",
+    "description": "Signed messages without proper replay protection (nonces, chain ID, contract address) can be reused maliciously across different contexts or chains.",
+    "code_example": "function execute(bytes memory sig, address to, uint amount) public {\n    require(verify(sig, to, amount)); // No nonce - can replay!\n    transfer(to, amount);\n}",
+    "recommendation": "Include nonces, chain ID, contract address, and deadline in signed messages. Use EIP-712 for structured data signing."
+  },
+  {
+    "id": "private-data",
+    "name": "Private Data Exposure",
+    "severity": "medium",
+    "category": "privacy",
+    "cwe_id": "CWE-200",
+    "description": "Variables marked as 'private' are not actually hidden - they're still visible on the blockchain. Any sensitive data stored in contract storage can be read by anyone.",
+    "code_example": "uint private secretKey = 12345; // Not actually secret!",
+    "recommendation": "Never store sensitive data like private keys or passwords on-chain. Use encryption or off-chain storage for sensitive information. Commit-reveal schemes for hidden values."
+  },
+  {
+    "id": "weak-randomness",
+    "name": "Weak Randomness",
+    "severity": "high",
+    "category": "cryptography",
+    "cwe_id": "CWE-330",
+    "description": "Using block variables like block.timestamp, block.number, or blockhash for randomness is predictable and can be manipulated by miners or predicted by attackers.",
+    "code_example": "uint random = uint(keccak256(abi.encodePacked(block.timestamp, block.difficulty))); // Predictable!",
+    "recommendation": "Use Chainlink VRF or other verifiable random function services for secure randomness. Commit-reveal schemes can also provide fairness."
+  },
+  {
+    "id": "force-ether",
+    "name": "Forcibly Sent Ether",
+    "severity": "medium",
+    "category": "security",
+    "cwe_id": "CWE-691",
+    "description": "Contracts can receive Ether via selfdestruct or coinbase transactions even without a payable function, potentially breaking invariants that rely on balance checks.",
+    "code_example": "require(address(this).balance == expectedBalance); // Can be broken by forced Ether",
+    "recommendation": "Don't rely on this.balance for critical logic. Use internal accounting variables to track expected balances separately from actual balance."
+  },
+  {
+    "id": "arbitrary-call",
+    "name": "Arbitrary External Call",
+    "severity": "critical",
+    "category": "security",
+    "cwe_id": "CWE-749",
+    "description": "Allowing users to specify arbitrary call targets and data can lead to various attacks including stealing funds, manipulating state, or calling dangerous functions.",
+    "code_example": "function execute(address target, bytes calldata data) public {\n    target.call(data); // User controls target and data!\n}",
+    "recommendation": "Validate targets against a whitelist. Never allow arbitrary calls to user-controlled addresses. Use specific interfaces instead of raw calls."
+  },
+  {
+    "id": "dos-revert",
+    "name": "DoS with Revert",
+    "severity": "medium",
+    "category": "dos",
+    "cwe_id": "CWE-400",
+    "description": "External calls that can revert can be used to block contract functionality. If a contract iterates through users making external calls, one malicious user can block the entire operation.",
+    "code_example": "for (uint i = 0; i < winners.length; i++) {\n    winners[i].transfer(prizes[i]); // One revert blocks all\n}",
+    "recommendation": "Use pull-over-push pattern where users withdraw their own funds. Handle failures gracefully and allow the function to continue."
+  },
+  {
+    "id": "storage-collision",
+    "name": "Storage Collision in Proxy",
+    "severity": "critical",
+    "category": "proxy",
+    "cwe_id": "CWE-119",
+    "description": "In proxy patterns, storage layout conflicts between proxy and implementation contracts can lead to critical state corruption and potential loss of funds.",
+    "code_example": "// Proxy has: address admin in slot 0\n// Implementation has: uint balance in slot 0\n// They will conflict!",
+    "recommendation": "Use EIP-1967 storage slots for proxy variables. Ensure implementation contracts use the same storage layout. Consider OpenZeppelin's proxy patterns."
+  }
+]
