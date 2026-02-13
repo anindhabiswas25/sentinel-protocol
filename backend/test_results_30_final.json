@@ -1,0 +1,251 @@
+{
+  "summary": {
+    "total": 30,
+    "passed": 15,
+    "failed": 15,
+    "success_rate": 50.0,
+    "execution_time_seconds": 156.62568378448486
+  },
+  "results": [
+    {
+      "name": "1_USDT",
+      "category": "SAFE",
+      "passed": true,
+      "score": 95.0,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "2_USDC",
+      "category": "SAFE",
+      "passed": true,
+      "score": 95.0,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "3_WETH",
+      "category": "SAFE",
+      "passed": true,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "4_DAI",
+      "category": "SAFE",
+      "passed": false,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "5_LINK",
+      "category": "SAFE",
+      "passed": false,
+      "score": null,
+      "risk": null,
+      "method": null
+    },
+    {
+      "name": "6_AAVE",
+      "category": "SAFE",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "7_SHIB",
+      "category": "SAFE",
+      "passed": false,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "8_CRV",
+      "category": "SAFE",
+      "passed": false,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "9_UNI",
+      "category": "SAFE",
+      "passed": true,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "10_MATIC",
+      "category": "SAFE",
+      "passed": false,
+      "score": null,
+      "risk": null,
+      "method": null
+    },
+    {
+      "name": "11_BadgerDAO",
+      "category": "EXPLOIT",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "12_NomadBridge",
+      "category": "EXPLOIT",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "13_PolyNetwork",
+      "category": "EXPLOIT",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "14_CreamFinance",
+      "category": "EXPLOIT",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "15_MergeToken",
+      "category": "EXPLOIT",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "16_YearnV1",
+      "category": "EXPLOIT",
+      "passed": false,
+      "score": null,
+      "risk": null,
+      "method": null
+    },
+    {
+      "name": "17_DForce",
+      "category": "EXPLOIT",
+      "passed": false,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "18_TornadoCash",
+      "category": "EXPLOIT",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "19_Unverified1",
+      "category": "UNVERIFIED",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "20_Unverified2",
+      "category": "UNVERIFIED",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "21_HoneypotUnverified",
+      "category": "UNVERIFIED",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "22_Malicious",
+      "category": "UNVERIFIED",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "23_LowLiquidity",
+      "category": "UNVERIFIED",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "24_TC_0.1",
+      "category": "OFAC",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "25_TC_1",
+      "category": "OFAC",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "26_TC_10",
+      "category": "OFAC",
+      "passed": true,
+      "score": 20.0,
+      "risk": "Critical",
+      "method": "dynamic-exploit-detection"
+    },
+    {
+      "name": "27_ClassicFloki",
+      "category": "HONEYPOT",
+      "passed": false,
+      "score": 94.8,
+      "risk": "Low",
+      "method": "verified_source"
+    },
+    {
+      "name": "28_PandD",
+      "category": "HONEYPOT",
+      "passed": false,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "29_ZeroAddress",
+      "category": "EDGE",
+      "passed": true,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    },
+    {
+      "name": "30_InvalidAddress",
+      "category": "EDGE",
+      "passed": true,
+      "score": 0.0,
+      "risk": "Unknown",
+      "method": "error"
+    }
+  ]
+}

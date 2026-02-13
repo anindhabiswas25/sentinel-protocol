@@ -1,0 +1,128 @@
+{
+  "summary": {
+    "total": 12,
+    "passed": 12,
+    "failed": 0,
+    "success_rate_percent": 100.0
+  },
+  "categories": {
+    "VERIFIED_SAFE": {
+      "passed": 4,
+      "total": 4,
+      "percentage": 100.0,
+      "results": [
+        [
+          "USDT",
+          {
+            "passed": true,
+            "score": 95.0,
+            "risk": "Low"
+          }
+        ],
+        [
+          "USDC",
+          {
+            "passed": true,
+            "score": 95.0,
+            "risk": "Low"
+          }
+        ],
+        [
+          "WETH",
+          {
+            "passed": true,
+            "score": 94.8,
+            "risk": "Low"
+          }
+        ],
+        [
+          "UNI",
+          {
+            "passed": true,
+            "score": 94.8,
+            "risk": "Low"
+          }
+        ]
+      ]
+    },
+    "KNOWN_EXPLOITED": {
+      "passed": 5,
+      "total": 5,
+      "percentage": 100.0,
+      "results": [
+        [
+          "BadgerDAO ($120M)",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ],
+        [
+          "Nomad Bridge ($190M)",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ],
+        [
+          "Old PolyNetwork ($611M)",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ],
+        [
+          "Cream Finance ($29M)",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ],
+        [
+          "Merge Token ($3M)",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ]
+      ]
+    },
+    "OFAC_SANCTIONED": {
+      "passed": 3,
+      "total": 3,
+      "percentage": 100.0,
+      "results": [
+        [
+          "Tornado Cash 0.1 ETH",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ],
+        [
+          "Tornado Cash 1 ETH",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ],
+        [
+          "Tornado Cash 10 ETH",
+          {
+            "passed": true,
+            "score": 20.0,
+            "risk": "Critical"
+          }
+        ]
+      ]
+    }
+  },
+  "timestamp": "2026-02-13T17:01:03.628200"
+}

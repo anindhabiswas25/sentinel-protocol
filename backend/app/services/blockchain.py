@@ -105,9 +105,11 @@ class BlockchainService:
         
         api_url = network_config["explorer_api"]
         api_key = self.etherscan_keys.get(network)
+        chain_id = network_config["chain_id"]
         
-        # Build API request
+        # Build API request (V2 requires chainid parameter)
         params = {
+            "chainid": str(chain_id),
             "module": "contract",
             "action": "getsourcecode",
             "address": address,

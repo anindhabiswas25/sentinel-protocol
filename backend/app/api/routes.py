@@ -176,11 +176,14 @@ async def analyze_source_code(request: SourceCodeAnalysisRequest):
                 cwe_id=vuln.get("cwe_id"),
             ))
         
-        # Calculate trust score
+        # Calculate trust score with 4-layer detection
         trust_score = scoring_service.calculate_trust_score(
             vulnerabilities=[v.model_dump() for v in vulnerabilities],
             code_quality_issues=analysis.get("code_quality_issues", []),
             is_verified=True,
+            use_ai_scoring=True,  # Enable AI scoring with 4-layer detection
+            source_code=request.source_code,  # Pass source code for RAG tiebreaker
+            chain="ethereum",  # Default chain
         )
         
         # Get severity breakdown
@@ -366,6 +369,7 @@ async def get_score_breakdown(
             scoring_service.calculate_trust_score(
                 vulnerabilities=[],  # Simplified for display
                 is_verified=record.is_verified,
+                use_ai_scoring=False,  # Simplified scoring for display
             )
         ),
     }

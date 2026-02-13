@@ -2,14 +2,25 @@
 Configuration settings for Sentinel Protocol Backend
 """
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 from functools import lru_cache
 from typing import Optional
+from pathlib import Path
 import os
+
+# Get the absolute path to the .env file
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+ENV_FILE = BASE_DIR / ".env"
 
 
 class Settings(BaseSettings):
     """Application settings loaded from environment variables"""
+    
+    model_config = SettingsConfigDict(
+        env_file=str(ENV_FILE),
+        env_file_encoding="utf-8",
+        extra="ignore"
+    )
     
     # API Settings
     APP_NAME: str = "Sentinel Protocol"
@@ -36,9 +47,11 @@ class Settings(BaseSettings):
     ARBITRUM_RPC: str = ""
     BASE_RPC: str = ""
     
-    # LLM (Groq)
-    GROQ_API_KEY: str
-    LLM_MODEL: str = "llama-3.3-70b-versatile"
+    # LLM (Cerebras - Higher Limits)
+    CEREBRAS_API_KEY: str
+    GEMINI_API_KEY: Optional[str] = None
+    LLM_MODEL: str = "llama-3.3-70b"
+    LLM_BASE_URL: str = "https://api.cerebras.ai/v1"
     LLM_MAX_TOKENS: int = 4096
     LLM_TEMPERATURE: float = 0.1
     
@@ -49,16 +62,11 @@ class Settings(BaseSettings):
     BASESCAN_API_KEY: Optional[str] = None
     
     # CORS Settings
-    CORS_ORIGINS: list = ["*"]
+    CORS_ORIGINS: list = ["http://localhost:3000", "http://127.0.0.1:3000"]
     
     # Rate Limiting
     RATE_LIMIT_REQUESTS: int = 100
     RATE_LIMIT_WINDOW: int = 60  # seconds
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        extra = "ignore"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -82,25 +90,25 @@ SUPPORTED_NETWORKS = {
         "name": "Ethereum Mainnet",
         "chain_id": 1,
         "explorer": "https://etherscan.io",
-        "explorer_api": "https://api.etherscan.io/api",
+        "explorer_api": "https://api.etherscan.io/v2/api",
     },
     "polygon": {
         "name": "Polygon Mainnet",
         "chain_id": 137,
         "explorer": "https://polygonscan.com",
-        "explorer_api": "https://api.polygonscan.com/api",
+        "explorer_api": "https://api.polygonscan.com/v2/api",
     },
     "arbitrum": {
         "name": "Arbitrum One",
         "chain_id": 42161,
         "explorer": "https://arbiscan.io",
-        "explorer_api": "https://api.arbiscan.io/api",
+        "explorer_api": "https://api.arbiscan.io/v2/api",
     },
     "base": {
         "name": "Base Mainnet",
         "chain_id": 8453,
         "explorer": "https://basescan.org",
-        "explorer_api": "https://api.basescan.org/api",
+        "explorer_api": "https://api.basescan.org/v2/api",
     },
 }
 

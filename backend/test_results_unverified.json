@@ -1,0 +1,21 @@
+{
+  "summary": {
+    "total": 5,
+    "passed": 0,
+    "failed": 5,
+    "success_rate_percent": 0.0,
+    "timestamp": "2026-02-13T17:11:59.438169"
+  },
+  "categories": {
+    "UNVERIFIED_SAFE": {
+      "passed": 0,
+      "total": 2,
+      "percentage": 0.0
+    },
+    "UNVERIFIED_UNSAFE": {
+      "passed": 0,
+      "total": 3,
+      "percentage": 0.0
+    }
+  }
+}

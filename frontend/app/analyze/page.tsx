@@ -23,26 +23,32 @@ export default function AnalyzePage() {
     setDetectedNetworks([]);
 
     try {
-      // Step 1 — Auto-detect network
+      // Step 1 — Auto-detect network (but don't fail if not found)
       setStatus("Detecting network…");
-      const detection = await detectNetwork(address);
-
-      if (!detection.found || detection.networks.length === 0) {
-        setError(
-          "No contract found at this address on any supported network (Ethereum, Polygon, Arbitrum, Base)."
-        );
-        setLoading(false);
-        setStatus("");
-        return;
+      let network = "ethereum"; // Default to ethereum
+      
+      try {
+        const detection = await detectNetwork(address);
+        
+        if (detection.found && detection.networks.length > 0) {
+          network = detection.primary ?? detection.networks[0];
+          setDetectedNetworks(detection.networks);
+          setStatus(
+            `Contract found on ${capitalize(network)}${detection.networks.length > 1 ? ` (+${detection.networks.length - 1} more)` : ""} — running AI analysis…`
+          );
+        } else {
+          // Contract not found on blockchain, but still try to analyze
+          // (4-layer exploit detection works even without blockchain data)
+          setStatus("Checking exploit databases and running analysis…");
+        }
+      } catch (detectErr) {
+        // If detection fails, continue with default network
+        console.warn("Network detection failed:", detectErr);
+        setStatus("Running analysis with exploit detection…");
       }
 
-      const network = detection.primary ?? detection.networks[0];
-      setDetectedNetworks(detection.networks);
-      setStatus(
-        `Contract found on ${capitalize(network)}${detection.networks.length > 1 ? ` (+${detection.networks.length - 1} more)` : ""} — running AI analysis…`
-      );
-
-      // Step 2 — Analyze
+      // Step 2 — Analyze (always run, even if contract not found)
+      // Backend has 4-layer exploit detection that works without blockchain data
       const data = await analyzeContract(address, network);
       setResult(data);
     } catch (err: unknown) {

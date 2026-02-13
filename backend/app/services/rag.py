@@ -1,14 +1,15 @@
 """
 RAG (Retrieval-Augmented Generation) service using in-memory vector store for vulnerability pattern matching.
-Note: ChromaDB has compatibility issues with Python 3.14, using simple similarity search instead.
+Enhanced with TF-IDF weighting, bigram matching, severity boosting, and relevance thresholds.
 """
 
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Set, Tuple
 import json
 import logging
+import math
 import os
 import re
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 from app.core.config import get_settings
 
@@ -16,45 +17,177 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
+# ---- Severity boost weights: higher-severity patterns get ranking bonus ----
+SEVERITY_BOOST = {
+    "critical": 1.25,
+    "high": 1.15,
+    "medium": 1.0,
+    "low": 0.90,
+    "informational": 0.80,
+}
+
+# Minimum relevance threshold — results below this are discarded
+MIN_RELEVANCE_THRESHOLD = 0.05
+
+# Important compound terms in smart-contract security (order matters: longer first)
+BIGRAMS = [
+    "flash loan", "price oracle", "reentrancy guard", "access control",
+    "front running", "gas limit", "delegatecall proxy", "selfdestruct destroy",
+    "integer overflow", "integer underflow", "unchecked return",
+    "tx origin", "block timestamp", "storage collision", "hidden mint",
+    "rug pull", "honeypot token", "liquidity trap", "tax token",
+    "proxy upgrade", "blacklist function", "pausable trap",
+    "oracle manipulation", "math overflow",
+]
+
+# High-value domain keywords that should carry extra weight
+DOMAIN_KEYWORDS = {
+    "reentrancy", "overflow", "underflow", "selfdestruct", "delegatecall",
+    "frontrunning", "flashloan", "oracle", "proxy", "access", "honeypot",
+    "rugpull", "phishing", "drain", "exploit", "vulnerability", "attack",
+    "mint", "pause", "blacklist", "upgrade", "manipulate", "manipulation",
+    "storage", "collision", "transfer", "approve", "allowance", "balance",
+    "withdraw", "deposit", "swap", "liquidity", "token", "erc20", "erc721",
+}
+
+
 class SimpleVectorStore:
     """
-    Simple in-memory vector store using keyword-based similarity.
-    This is a fallback implementation for Python 3.14 compatibility.
-    For production, consider using ChromaDB with Python 3.12.
+    In-memory vector store with TF-IDF-inspired similarity, bigram matching,
+    severity boosting, and domain-keyword weighting.
     """
     
     def __init__(self):
         self.documents: Dict[str, Dict[str, Any]] = {}
+        # IDF cache: recalculated on add
+        self._idf_cache: Dict[str, float] = {}
+        self._idf_dirty: bool = True
     
+    # ----------------------------------------------------------------
+    # Document management
+    # ----------------------------------------------------------------
+
     def add(self, doc_id: str, document: str, metadata: Dict[str, Any]):
-        """Add a document to the store"""
-        # Create simple keyword index
+        """Add a document to the store."""
         keywords = self._extract_keywords(document)
+        bigrams = self._extract_bigrams(document)
+        keyword_counts = self._count_keywords(document)
+        
         self.documents[doc_id] = {
             "document": document,
             "metadata": metadata,
             "keywords": keywords,
+            "bigrams": bigrams,
+            "keyword_counts": keyword_counts,
         }
+        self._idf_dirty = True  # invalidate IDF cache
     
-    def _extract_keywords(self, text: str) -> set:
-        """Extract keywords from text for matching"""
-        # Common Solidity/security keywords
+    def count(self) -> int:
+        return len(self.documents)
+    
+    def clear(self):
+        self.documents.clear()
+        self._idf_cache.clear()
+        self._idf_dirty = True
+
+    # ----------------------------------------------------------------
+    # Keyword / bigram extraction
+    # ----------------------------------------------------------------
+
+    STOPWORDS = frozenset({
+        'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been',
+        'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
+        'would', 'could', 'should', 'may', 'might', 'must', 'can',
+        'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
+        'as', 'or', 'and', 'but', 'if', 'this', 'that', 'which',
+        'not', 'no', 'its', 'it', 'also', 'use', 'using', 'used',
+        'code', 'example', 'vulnerability', 'vulnerable', 'contract',
+        'function', 'public', 'returns', 'return', 'require', 'uint',
+        'address', 'bool', 'true', 'false', 'value', 'severity',
+        'recommendation', 'description', 'cwe', 'name', 'type',
+    })
+
+    def _extract_keywords(self, text: str) -> Set[str]:
+        """Extract meaningful keywords with stopword filtering."""
         text_lower = text.lower()
-        words = re.findall(r'\b[a-z_]+\b', text_lower)
-        # Filter to meaningful keywords
-        stopwords = {'the', 'a', 'an', 'is', 'are', 'was', 'were', 'be', 'been', 
-                     'being', 'have', 'has', 'had', 'do', 'does', 'did', 'will',
-                     'would', 'could', 'should', 'may', 'might', 'must', 'can',
-                     'to', 'of', 'in', 'for', 'on', 'with', 'at', 'by', 'from',
-                     'as', 'or', 'and', 'but', 'if', 'this', 'that', 'which'}
-        return {w for w in words if len(w) > 2 and w not in stopwords}
-    
-    def search(self, query: str, n_results: int = 5, 
-               severity_filter: Optional[List[str]] = None) -> List[Dict[str, Any]]:
-        """Search for similar documents"""
-        query_keywords = self._extract_keywords(query)
+        words = re.findall(r'\b[a-z_][a-z0-9_]*\b', text_lower)
+        return {w for w in words if len(w) > 2 and w not in self.STOPWORDS}
+
+    def _count_keywords(self, text: str) -> Counter:
+        """Count keyword occurrences (for TF calculation)."""
+        text_lower = text.lower()
+        words = re.findall(r'\b[a-z_][a-z0-9_]*\b', text_lower)
+        return Counter(w for w in words if len(w) > 2 and w not in self.STOPWORDS)
+
+    def _extract_bigrams(self, text: str) -> Set[str]:
+        """Extract matching compound terms from text."""
+        text_lower = text.lower()
+        found: Set[str] = set()
+        for bg in BIGRAMS:
+            # Check both with and without space/hyphen/underscore
+            variants = [bg, bg.replace(" ", ""), bg.replace(" ", "-"), bg.replace(" ", "_")]
+            for v in variants:
+                if v in text_lower:
+                    found.add(bg)
+                    break
+        return found
+
+    # ----------------------------------------------------------------
+    # IDF computation
+    # ----------------------------------------------------------------
+
+    def _rebuild_idf(self):
+        """Compute IDF for all terms across the corpus."""
+        if not self._idf_dirty:
+            return
         
-        scores = []
+        n_docs = len(self.documents)
+        if n_docs == 0:
+            self._idf_cache = {}
+            self._idf_dirty = False
+            return
+        
+        doc_freq: Counter = Counter()
+        for doc_data in self.documents.values():
+            for kw in doc_data["keywords"]:
+                doc_freq[kw] += 1
+        
+        self._idf_cache = {
+            term: math.log((n_docs + 1) / (df + 1)) + 1.0
+            for term, df in doc_freq.items()
+        }
+        self._idf_dirty = False
+
+    # ----------------------------------------------------------------
+    # Search with TF-IDF + bigrams + severity boosting
+    # ----------------------------------------------------------------
+
+    def search(
+        self,
+        query: str,
+        n_results: int = 5,
+        severity_filter: Optional[List[str]] = None,
+    ) -> List[Dict[str, Any]]:
+        """
+        Search for similar documents using enhanced scoring:
+        
+        1. TF-IDF keyword similarity (base score)
+        2. Bigram match bonus (+0.15 per matching compound term)
+        3. Domain-keyword weight bonus (×1.5 for high-value terms)
+        4. Severity boost (critical patterns ranked higher)
+        5. Minimum relevance threshold filters noise
+        """
+        self._rebuild_idf()
+        
+        query_keywords = self._extract_keywords(query)
+        query_bigrams = self._extract_bigrams(query)
+        query_counts = self._count_keywords(query)
+        
+        if not query_keywords and not query_bigrams:
+            return []
+        
+        scores: List[Dict[str, Any]] = []
+        
         for doc_id, doc_data in self.documents.items():
             # Apply severity filter
             if severity_filter:
@@ -62,32 +195,74 @@ class SimpleVectorStore:
                 if doc_severity not in severity_filter:
                     continue
             
-            # Calculate similarity score based on keyword overlap
             doc_keywords = doc_data["keywords"]
+            doc_counts = doc_data["keyword_counts"]
+            doc_bigrams = doc_data["bigrams"]
+            
             if not doc_keywords:
                 continue
             
-            overlap = len(query_keywords & doc_keywords)
-            score = overlap / max(len(doc_keywords), 1)
+            # ---- 1. TF-IDF cosine-style similarity ----
+            overlap = query_keywords & doc_keywords
+            if not overlap and not (query_bigrams & doc_bigrams):
+                continue  # no relevance at all
+            
+            tfidf_score = 0.0
+            for term in overlap:
+                idf = self._idf_cache.get(term, 1.0)
+                
+                # TF in query  (log-normalized)
+                tf_q = 1 + math.log(query_counts.get(term, 1))
+                # TF in doc
+                tf_d = 1 + math.log(doc_counts.get(term, 1))
+                
+                term_score = tf_q * tf_d * idf
+                
+                # Domain keyword bonus: high-value terms get 1.5× weight
+                if term in DOMAIN_KEYWORDS:
+                    term_score *= 1.5
+                
+                tfidf_score += term_score
+            
+            # Normalize by document length to avoid bias toward large docs
+            max_possible = sum(
+                (1 + math.log(doc_counts.get(t, 1))) * self._idf_cache.get(t, 1.0)
+                for t in doc_keywords
+            )
+            if max_possible > 0:
+                tfidf_score /= max_possible
+            
+            # ---- 2. Bigram bonus ----
+            bigram_overlap = query_bigrams & doc_bigrams
+            bigram_bonus = len(bigram_overlap) * 0.15
+            
+            # ---- 3. Severity boost ----
+            sev = doc_data["metadata"].get("severity", "medium")
+            sev_boost = SEVERITY_BOOST.get(sev, 1.0)
+            
+            # ---- 4. Combined score ----
+            final_score = (tfidf_score + bigram_bonus) * sev_boost
+            
+            # ---- 5. Minimum threshold ----
+            if final_score < MIN_RELEVANCE_THRESHOLD:
+                continue
             
             scores.append({
                 "id": doc_id,
                 "document": doc_data["document"],
                 "metadata": doc_data["metadata"],
-                "score": score,
+                "score": round(final_score, 4),
+                "_debug": {
+                    "tfidf": round(tfidf_score, 4),
+                    "bigram_bonus": round(bigram_bonus, 4),
+                    "sev_boost": sev_boost,
+                    "matching_bigrams": list(bigram_overlap),
+                    "overlap_count": len(overlap),
+                },
             })
         
-        # Sort by score and return top results
         scores.sort(key=lambda x: x["score"], reverse=True)
         return scores[:n_results]
-    
-    def count(self) -> int:
-        """Return number of documents"""
-        return len(self.documents)
-    
-    def clear(self):
-        """Clear all documents"""
-        self.documents.clear()
 
 
 class RAGService:
@@ -105,10 +280,31 @@ class RAGService:
         self._initialized = False
     
     def _ensure_initialized(self):
-        """Lazy initialization"""
+        """Lazy initialization - auto-loads patterns from JSON file"""
         if not self._initialized:
-            logger.info("RAG Service initialized with in-memory store")
             self._initialized = True
+            logger.info("RAG Service initializing with in-memory store")
+            # Auto-load patterns from JSON file
+            self._load_patterns_from_file()
+            logger.info(f"RAG Service ready with {self.store.count()} patterns")
+    
+    def _load_patterns_from_file(self):
+        """Load vulnerability patterns from JSON data file."""
+        import os
+        patterns_file = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+            "data", "vulnerabilities", "patterns.json"
+        )
+        try:
+            if os.path.exists(patterns_file):
+                with open(patterns_file, "r") as f:
+                    patterns = json.load(f)
+                count = self.add_vulnerability_patterns(patterns)
+                logger.info(f"Loaded {count} patterns from {patterns_file}")
+            else:
+                logger.warning(f"Patterns file not found: {patterns_file}")
+        except Exception as e:
+            logger.error(f"Error loading patterns from file: {e}")
     
     def add_vulnerability_patterns(self, patterns: List[Dict[str, Any]]) -> int:
         """
@@ -208,33 +404,42 @@ class RAGService:
         """
         Get relevant vulnerability context for LLM analysis.
         
-        This method retrieves the most relevant vulnerability patterns
-        to provide as context to the LLM for more accurate analysis.
-        
-        Args:
-            source_code: Full contract source code
-            top_k: Number of patterns to retrieve
-        
-        Returns:
-            Formatted context string for LLM
+        Retrieves the most relevant patterns and formats them for the LLM.
+        Only includes results above the relevance threshold.
         """
-        # Search for relevant patterns
         patterns = self.search_similar_vulnerabilities(source_code, n_results=top_k)
         
         if not patterns:
             return "No relevant vulnerability patterns found in knowledge base."
         
-        # Format context
-        context_parts = ["## Relevant Vulnerability Patterns from Knowledge Base:\n"]
+        # Filter out low-relevance results (below 10% of top result)
+        if patterns:
+            top_score = patterns[0].get("relevance_score", 0)
+            cutoff = max(top_score * 0.10, MIN_RELEVANCE_THRESHOLD)
+            patterns = [p for p in patterns if p.get("relevance_score", 0) >= cutoff]
+        
+        if not patterns:
+            return "No sufficiently relevant vulnerability patterns found."
+        
+        context_parts = [
+            f"## Relevant Vulnerability Patterns from Knowledge Base ({len(patterns)} matches):\n"
+        ]
         
         for i, pattern in enumerate(patterns, 1):
-            relevance = pattern.get('relevance_score', 0) * 100
-            context_parts.append(f"""
-### {i}. {pattern.get('name', 'Unknown')} (Relevance: {relevance:.1f}%)
-- **Severity**: {pattern.get('severity', 'N/A')}
-- **CWE**: {pattern.get('cwe_id', 'N/A')}
-- **Details**: {pattern.get('document', 'N/A')[:500]}...
-""")
+            relevance = pattern.get("relevance_score", 0) * 100
+            severity = pattern.get("severity", "N/A")
+            
+            # Truncate document to keep context focused
+            doc_text = pattern.get("document", "N/A")
+            if len(doc_text) > 400:
+                doc_text = doc_text[:400] + "..."
+            
+            context_parts.append(
+                f"### {i}. {pattern.get('name', 'Unknown')} "
+                f"(Relevance: {relevance:.0f}%, Severity: {severity})\n"
+                f"- **CWE**: {pattern.get('cwe_id', 'N/A')}\n"
+                f"- **Details**: {doc_text}\n"
+            )
         
         return "\n".join(context_parts)
     

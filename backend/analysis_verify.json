@@ -1,0 +1,60 @@
+{
+  "success": true,
+  "metadata": {
+    "address": "0xda7a001b254cd22e46d3eab04d937489c93174c3",
+    "network": "ethereum",
+    "name": "StdReferenceProxy",
+    "compiler_version": "v0.6.11+commit.5ef660b1",
+    "is_verified": true,
+    "creation_date": null,
+    "creator_address": null,
+    "is_proxy": true,
+    "implementation_address": null
+  },
+  "trust_score": {
+    "overall_score": 75.0,
+    "security_score": 53.8,
+    "code_quality_score": 95.0,
+    "verification_score": 100.0,
+    "risk_level": "Low"
+  },
+  "summary": {
+    "total_vulnerabilities": 2,
+    "critical_count": 1,
+    "high_count": 0,
+    "medium_count": 1,
+    "low_count": 0,
+    "informational_count": 0,
+    "analysis_method": "verified_source",
+    "llm_insights": "The contract has a critical vulnerability related to arbitrary external calls and a medium-severity issue with missing input validation. Additionally, the contract uses an old Solidity compiler version, which is a low-severity issue."
+  },
+  "vulnerabilities": [
+    {
+      "id": "vuln-1",
+      "name": "Arbitrary External Call",
+      "severity": "critical",
+      "description": "The contract allows the owner to update the standard reference implementation using the `setRef` function, which can lead to arbitrary external calls.",
+      "location": "StdReferenceProxy.sol, line 143",
+      "recommendation": "Validate the target implementation address against a whitelist or use a more secure upgrade mechanism.",
+      "confidence": 0.95,
+      "cwe_id": "CWE-749"
+    },
+    {
+      "id": "vuln-2",
+      "name": "Missing Input Validation",
+      "severity": "medium",
+      "description": "The `getReferenceData` and `getReferenceDataBulk` functions do not validate the input parameters, which can lead to potential issues.",
+      "location": "StdReferenceProxy.sol, lines 151-155",
+      "recommendation": "Add input validation to ensure that the base and quote parameters are valid and properly formatted.",
+      "confidence": 0.75,
+      "cwe_id": "CWE-20"
+    }
+  ],
+  "recommendations": [
+    "Implement a more secure upgrade mechanism for the standard reference implementation.",
+    "Add input validation to the `getReferenceData` and `getReferenceDataBulk` functions.",
+    "Consider upgrading to a newer Solidity compiler version."
+  ],
+  "analysis_timestamp": "2026-02-12T15:09:15.606535",
+  "cached": false
+}

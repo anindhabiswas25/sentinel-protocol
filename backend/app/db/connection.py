@@ -17,22 +17,37 @@ logger = logging.getLogger(__name__)
 # Get settings
 settings = get_settings()
 
-# Ensure the DATABASE_URL uses psycopg (v3) driver
+# Ensure the DATABASE_URL uses correct driver
 database_url = settings.DATABASE_URL
-if database_url.startswith("postgresql://"):
-    database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
-elif database_url.startswith("postgres://"):
-    database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
 
-# Create SQLAlchemy engine with connection pooling
-engine = create_engine(
-    database_url,
-    pool_pre_ping=True,  # Verify connections before using
-    pool_size=5,
-    max_overflow=10,
-    pool_recycle=300,  # Recycle connections after 5 minutes
-    echo=settings.DEBUG,
-)
+# Configure engine based on database type
+if database_url.startswith("sqlite"):
+    # SQLite configuration
+    engine = create_engine(
+        database_url,
+        echo=settings.DEBUG,
+        connect_args={"check_same_thread": False}  # Allow multiple threads
+    )
+else:
+    # PostgreSQL configuration
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
+    elif database_url.startswith("postgres://"):
+        database_url = database_url.replace("postgres://", "postgresql+psycopg://", 1)
+    
+    # Create SQLAlchemy engine with connection pooling optimized for serverless
+    engine = create_engine(
+        database_url,
+        pool_pre_ping=True,  # Verify connections before using
+        pool_size=1,  # Reduced for serverless database
+        max_overflow=2,  # Reduced for serverless database
+        pool_recycle=60,  # Recycle connections after 1 minute
+        echo=settings.DEBUG,
+        connect_args={
+            "connect_timeout": 10,
+            "options": "-c timezone=utc"
+        }
+    )
 
 # Create session factory
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
@@ -110,27 +125,30 @@ def get_db_context() -> Generator[Session, None, None]:
     """
     Context manager for getting database sessions.
     Use in non-FastAPI contexts.
+    Returns None if database is not available.
     """
-    db = SessionLocal()
     try:
+        db = SessionLocal()
         yield db
         db.commit()
     except Exception as e:
-        db.rollback()
-        logger.error(f"Database error: {e}")
-        raise
+        if 'db' in locals():
+            db.rollback()
+        logger.debug(f"Database operation skipped (database not available): {e}")
+        # Don't raise - app can work without database
     finally:
-        db.close()
+        if 'db' in locals():
+            db.close()
 
 
 def init_db() -> None:
-    """Initialize database tables"""
+    """Initialize database tables (optional - app works without database)"""
     try:
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully")
     except Exception as e:
-        logger.error(f"Failed to create database tables: {e}")
-        raise
+        logger.warning(f"Failed to create database tables (will continue without database): {e}")
+        # Don't raise - app can work without database
 
 
 def check_db_connection() -> bool:

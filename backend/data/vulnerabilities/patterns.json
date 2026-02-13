@@ -198,5 +198,95 @@
     "description": "In proxy patterns, storage layout conflicts between proxy and implementation contracts can lead to critical state corruption and potential loss of funds.",
     "code_example": "// Proxy has: address admin in slot 0\n// Implementation has: uint balance in slot 0\n// They will conflict!",
     "recommendation": "Use EIP-1967 storage slots for proxy variables. Ensure implementation contracts use the same storage layout. Consider OpenZeppelin's proxy patterns."
+  },
+  {
+    "id": "honeypot-token",
+    "name": "Honeypot Token",
+    "severity": "critical",
+    "category": "scam",
+    "cwe_id": "CWE-840",
+    "description": "A honeypot token allows buying but prevents selling through hidden transfer restrictions, fee manipulation, or blacklisting. Users can purchase tokens but are unable to sell or transfer them, resulting in permanent loss of funds.",
+    "code_example": "function _transfer(address from, address to, uint amount) internal {\n    if (from != owner && to == uniswapPair) {\n        revert('Transfer not allowed'); // Blocks all selling\n    }\n}",
+    "recommendation": "Check for hidden transfer restrictions, verify selling is possible on a DEX before investing. Test with a small amount first."
+  },
+  {
+    "id": "rug-pull",
+    "name": "Rug Pull Vulnerability",
+    "severity": "critical",
+    "category": "scam",
+    "cwe_id": "CWE-284",
+    "description": "Contract allows the owner to drain all funds or liquidity without restriction. Common patterns include unlimited withdrawal functions, removable liquidity locks, and emergency functions that bypass protections.",
+    "code_example": "function emergencyWithdraw() external onlyOwner {\n    payable(owner).transfer(address(this).balance); // Drains all ETH\n    IERC20(token).transfer(owner, IERC20(token).balanceOf(address(this))); // Drains all tokens\n}",
+    "recommendation": "Check for owner-only withdrawal functions, verify timelock mechanisms, and ensure liquidity is genuinely locked."
+  },
+  {
+    "id": "hidden-mint",
+    "name": "Hidden Mint Function",
+    "severity": "critical",
+    "category": "scam",
+    "cwe_id": "CWE-284",
+    "description": "Contract contains hidden or obfuscated minting functions that allow the owner to create unlimited tokens, causing massive inflation and devaluing existing holders' tokens to zero.",
+    "code_example": "function _updateRewards(address account, uint amount) internal {\n    // Looks like a reward function but actually mints new tokens\n    _balances[account] += amount;\n    _totalSupply += amount;\n}",
+    "recommendation": "Verify all mint/creation paths are properly access-controlled and have supply caps. Check for functions that modify balances or total supply."
+  },
+  {
+    "id": "tax-token-scam",
+    "name": "Dynamic Tax/Fee Manipulation",
+    "severity": "critical",
+    "category": "scam",
+    "cwe_id": "CWE-284",
+    "description": "Contract allows owner to change transfer taxes/fees to extreme values (up to 100%), effectively trapping user funds. Tax is set low initially to attract buyers, then increased to prevent profitable selling.",
+    "code_example": "uint public sellTax = 5; // Starts at 5%\nfunction setTax(uint newTax) external onlyOwner {\n    sellTax = newTax; // Can be set to 99%\n}",
+    "recommendation": "Check if tax/fee rates have maximum caps enforced in the contract. Verify the owner cannot change fees above a reasonable threshold."
+  },
+  {
+    "id": "blacklist-function",
+    "name": "Arbitrary Blacklisting",
+    "severity": "high",
+    "category": "centralization",
+    "cwe_id": "CWE-284",
+    "description": "Contract allows the owner to blacklist any address, preventing them from transferring or selling tokens. This can be used to trap funds or target specific users.",
+    "code_example": "mapping(address => bool) public isBlacklisted;\nfunction blacklist(address account) external onlyOwner {\n    isBlacklisted[account] = true;\n}",
+    "recommendation": "Verify blacklist functionality has governance controls, timelock, or community vote requirements. Avoid contracts where a single owner can blacklist arbitrarily."
+  },
+  {
+    "id": "pausable-trap",
+    "name": "Malicious Pause Mechanism",
+    "severity": "high",
+    "category": "centralization",
+    "cwe_id": "CWE-284",
+    "description": "Contract can be paused by the owner with no guarantee of unpausing, effectively freezing all user funds. Unlike legitimate pause mechanisms, there is no timelock or governance process for unpausing.",
+    "code_example": "function pause() external onlyOwner {\n    paused = true; // No unpause guarantee, no timelock\n}",
+    "recommendation": "Verify pause mechanisms have automatic expiry, governance controls, or guaranteed unpause paths. Check if paused state can permanently trap funds."
+  },
+  {
+    "id": "proxy-upgrade-attack",
+    "name": "Malicious Proxy Upgrade",
+    "severity": "critical",
+    "category": "proxy",
+    "cwe_id": "CWE-829",
+    "description": "Upgradeable proxy contract allows the owner to change the implementation to a malicious contract, potentially stealing all funds or changing contract behavior without user consent.",
+    "code_example": "function upgradeTo(address newImpl) external onlyOwner {\n    _setImplementation(newImpl); // Can point to malicious code\n}",
+    "recommendation": "Verify upgrade mechanism has timelock, multi-sig requirement, or governance vote. Check if implementation changes emit events and have delay periods."
+  },
+  {
+    "id": "liquidity-trap",
+    "name": "Liquidity Withdrawal Trap",
+    "severity": "critical",
+    "category": "scam",
+    "cwe_id": "CWE-284",
+    "description": "Contract claims to lock liquidity but contains hidden mechanisms to withdraw or redirect LP tokens. The lock may have owner-only bypass functions or extremely short lock periods.",
+    "code_example": "function lockLiquidity(uint duration) external {\n    lockEnd = block.timestamp + duration;\n}\nfunction emergencyUnlock() external onlyOwner {\n    lockEnd = 0; // Bypasses all locks\n}",
+    "recommendation": "Verify liquidity lock contracts are third-party (e.g., Team Finance, Unicrypt) and not custom-built. Check for emergency withdrawal functions."
+  },
+  {
+    "id": "math-overflow-reflection",
+    "name": "Reflection Token Math Overflow",
+    "severity": "high",
+    "category": "arithmetic",
+    "cwe_id": "CWE-190",
+    "description": "Reflection tokens using complex math for automatic redistribution are prone to overflow/underflow bugs that can cause incorrect balance calculations, frozen transfers, or exploitable rounding errors.",
+    "code_example": "uint currentRate = _getRate();\nuint rAmount = tAmount * currentRate; // Can overflow with large supplies\nuint rFee = tFee * currentRate; // Rounding errors accumulate",
+    "recommendation": "Verify reflection math uses SafeMath or Solidity 0.8+. Check for edge cases with extreme supply values and verify balanceOf returns correct values."
   }
 ]

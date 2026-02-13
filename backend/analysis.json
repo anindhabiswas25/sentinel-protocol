@@ -1,0 +1,60 @@
+{
+  "success": true,
+  "metadata": {
+    "address": "0xda7a001b254cd22e46d3eab04d937489c93174c3",
+    "network": "ethereum",
+    "name": "StdReferenceProxy",
+    "compiler_version": "v0.6.11+commit.5ef660b1",
+    "is_verified": true,
+    "creation_date": null,
+    "creator_address": null,
+    "is_proxy": true,
+    "implementation_address": null
+  },
+  "trust_score": {
+    "overall_score": 85.0,
+    "security_score": 68.0,
+    "code_quality_score": 95.0,
+    "verification_score": 100.0,
+    "risk_level": "Low"
+  },
+  "summary": {
+    "total_vulnerabilities": 2,
+    "critical_count": 0,
+    "high_count": 0,
+    "medium_count": 2,
+    "low_count": 0,
+    "informational_count": 0,
+    "analysis_method": "verified_source",
+    "llm_insights": "The contract has some potential issues with input validation and storage management, but overall, it appears to be well-structured and secure."
+  },
+  "vulnerabilities": [
+    {
+      "id": "vuln-1",
+      "name": "Missing Input Validation",
+      "severity": "medium",
+      "description": "The contract does not validate the input parameters for the `getReferenceData` and `getReferenceDataBulk` functions. This could lead to potential issues if the inputs are not properly sanitized.",
+      "location": "StdReferenceProxy.sol, lines 134-135",
+      "recommendation": "Add input validation to ensure that the input parameters are valid and properly sanitized.",
+      "confidence": 0.75,
+      "cwe_id": "CWE-20"
+    },
+    {
+      "id": "vuln-2",
+      "name": "Potential for Storage Collision",
+      "severity": "medium",
+      "description": "The contract uses a proxy pattern, which can lead to storage collisions if not properly implemented. However, in this case, the contract uses a separate storage slot for the `ref` variable, which reduces the risk of storage collisions.",
+      "location": "StdReferenceProxy.sol, line 123",
+      "recommendation": "Consider using a more robust storage management system to mitigate the risk of storage collisions.",
+      "confidence": 0.65,
+      "cwe_id": "CWE-119"
+    }
+  ],
+  "recommendations": [
+    "Add input validation to the `getReferenceData` and `getReferenceDataBulk` functions.",
+    "Consider updating to a newer version of the Solidity compiler.",
+    "Review the storage management system to mitigate the risk of storage collisions."
+  ],
+  "analysis_timestamp": "2026-02-12T14:42:54.307049",
+  "cached": false
+}

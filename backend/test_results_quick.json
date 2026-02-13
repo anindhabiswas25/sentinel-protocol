@@ -1,0 +1,66 @@
+{
+  "summary": {
+    "total": 5,
+    "passed": 5,
+    "failed": 0,
+    "success_rate": 100.0
+  },
+  "results": [
+    {
+      "name": "USDT",
+      "type": "SAFE",
+      "passed": true,
+      "score": 95.0,
+      "risk_level": "Low",
+      "method": "verified_source",
+      "expected_score": "75-95",
+      "expected_risk": "Low",
+      "issue": ""
+    },
+    {
+      "name": "BadgerDAO",
+      "type": "EXPLOITED",
+      "passed": true,
+      "score": 20.0,
+      "risk_level": "Critical",
+      "method": "dynamic-exploit-detection",
+      "expected_score": "0-24",
+      "expected_risk": "Critical",
+      "issue": ""
+    },
+    {
+      "name": "PolyNetwork",
+      "type": "EXPLOITED",
+      "passed": true,
+      "score": 20.0,
+      "risk_level": "Critical",
+      "method": "dynamic-exploit-detection",
+      "expected_score": "0-24",
+      "expected_risk": "Critical",
+      "issue": ""
+    },
+    {
+      "name": "NomadBridge",
+      "type": "EXPLOITED",
+      "passed": true,
+      "score": 20.0,
+      "risk_level": "Critical",
+      "method": "dynamic-exploit-detection",
+      "expected_score": "0-24",
+      "expected_risk": "Critical",
+      "issue": ""
+    },
+    {
+      "name": "TornadoCash",
+      "type": "OFAC",
+      "passed": true,
+      "score": 20.0,
+      "risk_level": "Critical",
+      "method": "dynamic-exploit-detection",
+      "expected_score": "0-24",
+      "expected_risk": "Critical",
+      "issue": ""
+    }
+  ],
+  "timestamp": "2026-02-13T16:56:53.435563"
+}

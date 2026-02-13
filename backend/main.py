@@ -3,6 +3,12 @@ Sentinel Protocol - AI-Powered Smart Contract Auditor
 Main FastAPI application entry point
 """
 
+from dotenv import load_dotenv
+import os
+
+# Load environment variables from .env file
+load_dotenv()
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -12,7 +18,8 @@ import sys
 from app.core.config import get_settings
 from app.api.routes import router
 from app.db.connection import init_db
-from app.services.rag import seed_default_patterns, rag_service
+from app.services.rag_semantic import rag_service
+from app.services.exploit_cache_scheduler import exploit_cache_scheduler  # NEW: Cache scheduler
 
 # Configure logging
 logging.basicConfig(
@@ -37,22 +44,29 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting Sentinel Protocol Backend...")
     
-    # Initialize database
+    # Initialize database (optional)
     try:
         init_db()
-        logger.info("✅ Database initialized")
-    except Exception as e:
-        logger.error(f"❌ Database initialization failed: {e}")
-    
-    # Seed vulnerability patterns if empty
-    try:
-        if rag_service.get_pattern_count() == 0:
-            count = seed_default_patterns()
-            logger.info(f"✅ Seeded {count} vulnerability patterns")
+        if check_db_connection():
+            logger.info("✅ Database connected and initialized")
         else:
-            logger.info(f"✅ Vector DB has {rag_service.get_pattern_count()} patterns")
+            logger.warning("⚠️  Database not available - continuing without persistence")
     except Exception as e:
-        logger.error(f"❌ Pattern seeding failed: {e}")
+        logger.warning(f"⚠️  Database initialization failed - continuing without persistence: {e}")
+    
+    # Initialize semantic RAG patterns (auto-loaded on first use)
+    try:
+        pattern_count = rag_service.get_pattern_count()
+        logger.info(f"✅ Semantic RAG ready with {pattern_count} patterns")
+    except Exception as e:
+        logger.error(f"❌ Semantic RAG initialization failed: {e}")
+    
+    # Start exploit cache scheduler
+    try:
+        exploit_cache_scheduler.start()
+        logger.info("✅ Exploit cache scheduler started")
+    except Exception as e:
+        logger.error(f"❌ Exploit cache scheduler failed to start: {e}")
     
     logger.info("✅ Sentinel Protocol Backend is ready!")
     
@@ -60,6 +74,13 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("👋 Shutting down Sentinel Protocol Backend...")
+    
+    # Stop exploit cache scheduler
+    try:
+        exploit_cache_scheduler.stop()
+        logger.info("✅ Exploit cache scheduler stopped")
+    except Exception as e:
+        logger.error(f"❌ Exploit cache scheduler failed to stop: {e}")
 
 
 # Create FastAPI application
